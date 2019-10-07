@@ -102,6 +102,23 @@ library SafeMath {
     }
 }
 
+interface CTokenInterface {
+    function redeemUnderlying(uint redeemAmount) external returns (uint);
+}
+
+
+interface CETHInterface {
+    function mint() external payable; // For ETH
+}
+
+interface ERC20Interface {
+    function allowance(address, address) external view returns (uint);
+    function balanceOf(address) external view returns (uint);
+    function approve(address, uint) external;
+    function transfer(address, uint) external returns (bool);
+    function transferFrom(address, address, uint) external returns (bool);
+}
+
 
 contract AutoETHSavingsAccount is Ownable, ReentrancyGuard{
     using SafeMath for uint;
@@ -154,3 +171,102 @@ contract AutoETHSavingsAccount is Ownable, ReentrancyGuard{
     }
 
 }
+
+contract DSMath {
+
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, "math-not-safe");
+    }
+
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        z = x - y <= x ? x - y : 0;
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, "math-not-safe");
+    }
+
+    uint constant WAD = 10 ** 18;
+
+    function wmul(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, y), WAD / 2) / WAD;
+    }
+
+    function wdiv(uint x, uint y) internal pure returns (uint z) {
+        z = add(mul(x, WAD), y / 2) / y;
+    }
+
+}
+
+
+contract Helpers is DSMath {
+
+    /**
+     * @dev get ethereum address for trade
+     */
+    function getAddressETH() public pure returns (address eth) {
+        eth = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    }
+
+  
+    /**
+     * @dev get Compound Comptroller Address
+     */
+    function getCETHAddress() public pure returns (address cEth) {
+        cEth = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+    }
+
+
+    /**
+     * @dev setting allowance to compound for the "user proxy" if required
+     */
+    function setApproval(address erc20, uint srcAmt, address to) internal {
+        ERC20Interface erc20Contract = ERC20Interface(erc20);
+        uint tokenAllowance = erc20Contract.allowance(address(this), to);
+        if (srcAmt > tokenAllowance) {
+            erc20Contract.approve(to, 2**255);
+        }
+    }
+
+}
+
+
+contract CompoundResolver is Helpers {
+
+		event LogMint(address erc20, address cErc20, uint tokenAmt, address owner);
+		event LogRedeem(address erc20, address cErc20, uint tokenAmt, address owner);
+		
+		/**
+		 * @dev Deposit ETH/ERC20 and mint Compound Tokens
+		 */
+		function mintCEth(uint tokenAmt) internal {
+			CETHInterface cToken = CETHInterface(getCETHAddress());
+			cToken.mint.value(tokenAmt)();
+			emit LogMint(
+				getAddressETH(),
+				getCETHAddress(),
+				tokenAmt,
+				msg.sender
+			);
+		}
+
+		/**
+		 * @dev Redeem ETH/ERC20 and mint Compound Tokens
+		 * @param tokenAmt Amount of token To Redeem
+		 */
+		function redeemEth(uint tokenAmt) internal {
+			CTokenInterface cToken = CTokenInterface(getCETHAddress());
+			setApproval(getCETHAddress(), 10**30, getCETHAddress());
+			require(cToken.redeemUnderlying(tokenAmt) == 0, "something went wrong");
+			emit LogRedeem(
+				getAddressETH(),
+				getCETHAddress(),
+				tokenAmt,
+				address(this)
+			);
+		}
+
+   
+
+	}
+
