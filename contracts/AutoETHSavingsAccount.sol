@@ -233,40 +233,27 @@ contract Helpers is DSMath {
 
 contract CompoundResolver is Helpers {
 
-		event LogMint(address erc20, address cErc20, uint tokenAmt, address owner);
-		event LogRedeem(address erc20, address cErc20, uint tokenAmt, address owner);
+ event LogMint(address erc20, address cErc20, uint tokenAmt, address owner);
+ event LogRedeem(address erc20, address cErc20, uint tokenAmt, address owner);
 		
-		/**
-		 * @dev Deposit ETH/ERC20 and mint Compound Tokens
-		 */
-		function mintCEth(uint tokenAmt) internal {
-			CETHInterface cToken = CETHInterface(getCETHAddress());
-			cToken.mint.value(tokenAmt)();
-			emit LogMint(
-				getAddressETH(),
-				getCETHAddress(),
-				tokenAmt,
-				msg.sender
-			);
-		}
+ /**
+ * @dev Deposit ETH/ERC20 and mint Compound Tokens
+ */
+  function mintCEth(uint tokenAmt) internal {
+ 	CETHInterface cToken = CETHInterface(getCETHAddress());
+	cToken.mint.value(tokenAmt)();
+		emit LogMint(getAddressETH(),getCETHAddress(),tokenAmt,	msg.sender);
+  }
 
-		/**
-		 * @dev Redeem ETH/ERC20 and mint Compound Tokens
-		 * @param tokenAmt Amount of token To Redeem
-		 */
-		function redeemEth(uint tokenAmt) internal {
-			CTokenInterface cToken = CTokenInterface(getCETHAddress());
-			setApproval(getCETHAddress(), 10**30, getCETHAddress());
-			require(cToken.redeemUnderlying(tokenAmt) == 0, "something went wrong");
-			emit LogRedeem(
-				getAddressETH(),
-				getCETHAddress(),
-				tokenAmt,
-				address(this)
-			);
-		}
-
-   
-
-	}
+ /**
+ * @dev Redeem ETH/ERC20 and mint Compound Tokens
+ * @param tokenAmt Amount of token To Redeem
+ */
+ function redeemEth(uint tokenAmt) internal {
+     CTokenInterface cToken = CTokenInterface(getCETHAddress());
+     setApproval(getCETHAddress(), 10**30, getCETHAddress());
+     require(cToken.redeemUnderlying(tokenAmt) == 0, "something went wrong");
+      emit LogRedeem(getAddressETH(),getCETHAddress(),tokenAmt,	address(this));
+ }
+}
 
